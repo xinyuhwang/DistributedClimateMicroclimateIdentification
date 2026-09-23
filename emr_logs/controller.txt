@@ -1,0 +1,47 @@
+2025-12-03T18:23:52.259Z INFO Ensure step 4 jar file command-runner.jar
+2025-12-03T18:23:52.260Z INFO StepRunner: Created Runner for step 4
+INFO startExec 'hadoop jar /var/lib/aws/emr/step-runner/hadoop-jars/command-runner.jar spark-submit --deploy-mode cluster s3://mydatahwbucket/kmeans.py'
+INFO Environment:
+  PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/opt/aws/puppet/bin/:/opt/puppetlabs/bin
+  INVOCATION_ID=73ea6d023a214673878b8fa04cbfe3e6
+  SECURITY_PROPERTIES=/emr/instance-controller/lib/security.properties
+  HISTCONTROL=ignoredups
+  MANPATH=:/opt/puppetlabs/puppet/share/man
+  PIDFILE=/emr/instance-controller/run/instance-controller.pid
+  HISTSIZE=1000
+  HADOOP_ROOT_LOGGER=INFO,DRFA
+  AWS_DEFAULT_REGION=us-west-2
+  JAVA_HOME=/etc/alternatives/jre
+  BASH_FUNC_which%%=() {  ( alias; eval ${which_declare} ) | /usr/bin/which --tty-only --read-alias --read-functions --show-tilde --show-dot "$@"}
+  LANG=en_US.UTF-8
+  JOURNAL_STREAM=8:25949
+  MAIL=/var/spool/mail/hadoop
+  which_declare=declare -f
+  LOGNAME=hadoop
+  PWD=/
+  HADOOP_CLIENT_OPTS=-Djava.io.tmpdir=/mnt/var/lib/hadoop/steps/s-104760212L2RQNGS6A02/tmp
+  _=/etc/alternatives/jre/bin/java
+  S_COLORS=auto
+  LESSOPEN=||/usr/bin/lesspipe.sh %s
+  SHELL=/bin/bash
+  USER=hadoop
+  GEM_HOME=/home/hadoop/.local/share/gem/ruby
+  HADOOP_LOGFILE=syslog
+  SYSTEMD_COLORS=false
+  HOSTNAME=ip-172-31-37-147.us-west-2.compute.internal
+  HADOOP_LOG_DIR=/mnt/var/log/hadoop/steps/s-104760212L2RQNGS6A02
+  SYSTEMD_EXEC_PID=4976
+  EMR_STEP_ID=s-104760212L2RQNGS6A02
+  SHLVL=0
+  HOME=/home/hadoop
+  HADOOP_IDENT_STRING=hadoop
+INFO redirectOutput to /mnt/var/log/hadoop/steps/s-104760212L2RQNGS6A02/stdout
+INFO redirectError to /mnt/var/log/hadoop/steps/s-104760212L2RQNGS6A02/stderr
+INFO Working dir /mnt/var/lib/hadoop/steps/s-104760212L2RQNGS6A02
+INFO ProcessRunner started child process 24705
+2025-12-03T18:23:52.262Z INFO HadoopJarStepRunner.Runner: startRun() called for s-104760212L2RQNGS6A02 Child Pid: 24705
+INFO Synchronously wait child process to complete : hadoop jar /var/lib/aws/emr/step-runner/hadoop-...
+INFO waitProcessCompletion ended with exit code 0 : hadoop jar /var/lib/aws/emr/step-runner/hadoop-...
+INFO total process run time: 60 seconds
+2025-12-03T18:24:52.361Z INFO Step created jobs: 
+2025-12-03T18:24:52.361Z INFO Step succeeded with exitCode 0 and took 60 seconds

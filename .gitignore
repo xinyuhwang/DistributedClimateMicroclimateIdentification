@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+
+# Generated data and model artifacts (regenerate via the pipeline scripts)
+nasa_power_data/
+preprocessed_data/
+spark_data/
+*.pkl
