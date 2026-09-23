@@ -1,0 +1,2 @@
+# DistributedClimateMicroclimateIdentification
+Distributed Climate Microclimate Identification Using MapReduce K-Means Clustering
