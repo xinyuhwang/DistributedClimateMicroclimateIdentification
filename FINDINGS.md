@@ -17,6 +17,7 @@ analysis (NASA POWER accessed 2025-10-12).
 | 1 | Build a working local environment | ✅ Done — three blocking issues fixed |
 | 2 | Regenerate the 495-location dataset | ✅ Reproduced exactly, with one caveat about K |
 | 3 | Rewrite the Spark job as real map/reduce | ✅ Done and validated against three references |
+| 5 | Measure where distribution actually pays off | ✅ Crossover found; speedup and efficiency measured |
 
 Two findings matter beyond the mechanics:
 
@@ -274,8 +275,122 @@ Runtime for identical work, varying only partition count:
 per-task scheduling cost exceeds the arithmetic being scheduled. This is the
 honest scaling result at this data size: distribution is correct here, but it
 does not pay. It begins to pay only when partitions hold enough points to
-amortise their own overhead — which is what the 1.26M-record benchmark
-(step 5, not yet run) is designed to measure.
+amortise their own overhead — which step 5 measures directly.
+
+---
+
+## Step 5 — Where distribution starts to pay off
+
+### Why the job was too small
+
+The location-level pipeline aggregates 1,265,715 daily observations into 495
+rows before clustering begins. The large data is real; it is simply consumed
+before Spark ever sees it. Clustering the daily records instead keeps the data
+at full size — 1.26M points reduced to the same 14 dimensions (96.71% variance
+retained).
+
+This answers a different question from the main analysis — "what daily weather
+regimes occur?" rather than "which locations share a climate?" — but it is the
+honest way to obtain a real speedup curve.
+
+### Experimental design
+
+The two modes share their geometry by importing it from the same module, so
+the inner loop is provably identical and the only variable is *where*
+aggregation happens:
+
+| Mode | Aggregation |
+|---|---|
+| `distributed` | `mapPartitions` → `reduceByKey` across executors |
+| `driver` | `collect()` once, then a single-threaded Python loop (what the original job does) |
+
+Controls applied:
+
+- Both modes start from **identical centroids** (fixed seed, plain random).
+  k-means‖ was deliberately excluded because it runs Spark jobs, which would
+  contaminate the driver-side path.
+- **Fixed iteration count with early exit disabled**, so every configuration
+  performs exactly the same work.
+- **The first iteration is discarded** — JVM codegen, JIT warm-up and cache
+  materialisation all land there.
+- **Only the loop is timed** — not Spark start-up, CSV reads, PCA or output.
+- **Median of three repeats.**
+- `local[6]`, not `local[10]`: the M2 Pro's 4 efficiency cores are materially
+  slower than its 6 performance cores and would add noise.
+
+scikit-learn was timed alongside as a reference. It is vectorised C rather than
+pure Python, so it is not like-for-like — it is there to answer "is Spark
+warranted at this size at all?"
+
+### Size sweep (6 cores, K=14, 10 iterations)
+
+| N | Distributed | Driver-side | scikit-learn | Speedup |
+|---|---|---|---|---|
+| 495 | 0.111 s | 0.003 s | 0.00009 s | **0.02×** |
+| 5,000 | 0.105 s | 0.025 s | 0.00048 s | **0.24×** |
+| 50,000 | 0.141 s | 0.245 s | 0.00127 s | **1.74×** |
+| 500,000 | 0.578 s | 2.453 s | 0.00802 s | **4.25×** |
+| 1,265,715 | 1.283 s | 6.269 s | 0.01984 s | **4.89×** |
+
+**The crossover lies between 5,000 and 50,000 points.** Below it, distribution
+costs more than it saves: at the project's actual size of 495 locations the
+distributed job is **44× slower** than looping on the driver.
+
+The distributed column barely moves from 495 to 50,000 (0.111 → 0.141 s).
+That is a fixed per-iteration scheduling floor of roughly 0.1 s, beneath which
+the actual computation is invisible until the data grows large enough to
+surface above it.
+
+### Core sweep (full dataset)
+
+| Cores | s/iteration | Speedup | Efficiency |
+|---|---|---|---|
+| 1 | 6.616 | 1.00× | 1.00 |
+| 2 | 3.492 | 1.89× | 0.95 |
+| 4 | 1.910 | 3.46× | 0.87 |
+| 6 | 1.329 | 4.98× | 0.83 |
+
+Scaling is close to linear. **Parallel efficiency is 0.83 at six cores**, where
+the report states 0.35 and describes that as typical for iterative algorithms.
+The measured figure is more than twice as good.
+
+### The experiment checking itself
+
+At one core the distributed path takes 6.616 s/iteration and the driver path
+6.269 s — within 6% of each other, as they must be if the benchmark is
+measuring parallelism rather than two different implementations. Any larger gap
+would have indicated a confound in the design.
+
+### In-mapper combining, measured
+
+The map phase emitted **84 records per iteration** — 6 partitions × 14 clusters
+— regardless of dataset size. Against one record per point at 1.26M points,
+that is a **15,068× reduction** in shuffle volume.
+
+This is the honest replacement for the report's 498× network-I/O claim. The
+real effect is larger, correctly derived, and *grows with N*, which is the
+property that actually matters. The 498× figure compared against a hypothetical
+implementation that ships the entire dataset every iteration — something no one
+would write.
+
+### The uncomfortable result
+
+At 1.26M points scikit-learn runs **65× faster than the six-core distributed
+job** and **316× faster than the driver loop**, single-threaded on one machine.
+
+That is the measured cost of the no-NumPy constraint. It does not invalidate
+the Spark work — the case for distribution is data exceeding one machine's
+memory, not raw speed at this size — but it should be stated plainly. A report
+that concedes this is more credible than one that omits it.
+
+### Threat to validity
+
+This ran on a single machine, so "distributed" means multi-core with real
+serialisation but no network. On a genuine cluster the shuffle crosses the
+network, so the crossover would sit at a larger N than measured here and the
+efficiency at six cores would be lower.
+
+Raw results: `benchmark_results.json`.
 
 ---
 
@@ -283,14 +398,11 @@ amortise their own overhead — which is what the 1.26M-record benchmark
 
 - **Step 4** — formal validation write-up using the existing
   `compare_emr_local.py` comparison and figures.
-- **Step 5** — scale benchmark on the full 1,265,715 daily records. Location-level
-  aggregation collapses the data to 495 rows before clustering, which is why
-  the job is too small to benefit from distribution. Clustering the daily
-  records instead answers a different question ("what weather regimes occur?"
-  rather than "which locations share a climate?") but is where a genuine
-  speedup curve can be measured.
 - **Report corrections** — the claims listed under "What the original code did"
-  describe an intended design rather than the committed code.
+  describe an intended design rather than the committed code. Section 5 can now
+  cite measured figures in place of estimates: speedup 4.89× (estimated 4.2×),
+  parallel efficiency 0.83 (stated 0.35), and a 15,068× shuffle reduction in
+  place of the 498× network-I/O claim.
 - **K sweep** — extending beyond K=15 would determine whether a true interior
   optimum exists.
 
@@ -310,4 +422,8 @@ python "Source Code/data_preparation_spark.py"
 python "Source Code/distributed_kmeans_mapreduce.py" \
     --input spark_data/pca_features.csv \
     --output out --master "local[*]"
+
+# Scaling benchmark (~20 min; --prepare builds the 1.26M-record dataset first)
+python "Source Code/benchmark_scaling.py" --prepare
+python "Source Code/benchmark_scaling.py" --cores 6
 ```

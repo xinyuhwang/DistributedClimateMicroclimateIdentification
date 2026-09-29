@@ -1,0 +1,73 @@
+{
+  "config": {
+    "k": 14,
+    "iterations": 10,
+    "repeats": 3,
+    "cores": 6
+  },
+  "size_sweep": [
+    {
+      "n": 495,
+      "distributed_s": 0.11122691650234628,
+      "driver_s": 0.002495187502063345,
+      "sklearn_s": 8.867500000633299e-05,
+      "speedup": 0.02243330643811123,
+      "partitions": 6,
+      "map_records_emitted": 80.18181818181819
+    },
+    {
+      "n": 5000,
+      "distributed_s": 0.1049770419995184,
+      "driver_s": 0.024950708000687882,
+      "sklearn_s": 0.000475895800627768,
+      "speedup": 0.2376777581597541,
+      "partitions": 6,
+      "map_records_emitted": 84.0
+    },
+    {
+      "n": 50000,
+      "distributed_s": 0.140551354001218,
+      "driver_s": 0.2451183955054148,
+      "sklearn_s": 0.001265574998978991,
+      "speedup": 1.743977475331121,
+      "partitions": 6,
+      "map_records_emitted": 84.0
+    },
+    {
+      "n": 500000,
+      "distributed_s": 0.5777601249938016,
+      "driver_s": 2.4533333544968627,
+      "sklearn_s": 0.00801570830080891,
+      "speedup": 4.2462836190420425,
+      "partitions": 6,
+      "map_records_emitted": 84.0
+    },
+    {
+      "n": 1265715,
+      "distributed_s": 1.2830834790074732,
+      "driver_s": 6.268583708493679,
+      "sklearn_s": 0.01983918750047451,
+      "speedup": 4.885561860201591,
+      "partitions": 6,
+      "map_records_emitted": 84.0
+    }
+  ],
+  "core_sweep": [
+    {
+      "cores": 1,
+      "seconds": 6.615778478997527
+    },
+    {
+      "cores": 2,
+      "seconds": 3.492336895498738
+    },
+    {
+      "cores": 4,
+      "seconds": 1.9100113330059685
+    },
+    {
+      "cores": 6,
+      "seconds": 1.3288846045034006
+    }
+  ]
+}
